@@ -261,6 +261,21 @@ n2
 - с помощью reduce
 =#
 
+ar = [1, 2, 3, 4]
+
+pros = 1
+
+for i in ar
+    pros *= i
+end
+
+pros
+# Не поняла чего именно хотели. loop fusion это совмещение множество циклов в один
+
+ar = [1, 2, 3, 4]
+reduce(*, ar, init=1)  # Используем оператор * с начальным значением 1
+
+
 #=
 Написать функцию от одного аргумента и запустить ее по всем элементам массива
 с помощью точки (broadcast)
@@ -268,25 +283,64 @@ c помощью map
 c помощью list comprehension
 указать, чем это лучше явного цикла?
 =#
+ 
+# С помощью точки
+f(x) = x + 2
+f.(ar)
+# Компактный. Работает на многомерном массиве. Внутри уже есть loop fusion
+
+# c помощью map
+map(f, ar)
+# Подерживает не только массивы. 
+
+# c помощью list comprehension
+[f(x) for x in ar]
+# Сразу видно что да как. Позваляет дополнять функции
+#=
+все это лучше цикла: компактность. Не нужно следить за индексами
+=# 
+
+
 
 # Перемножить вектор-строку [1 2 3] на вектор-столбец [10,20,30] и объяснить результат
 
+stroc = [1 2 3]
+stolb = [10, 20, 30]
+
+result = stroc * stolb
+# Происходит скалярное произведение
+
 
 # В одну строку выбрать из массива [1, -2, 2, 3, 4, -5, 0] только четные и положительные числа
+ar = [1, -2, 2, 3, 4, -5, 0]
+filter(x -> x > 0 && iseven(x), ar)
 
 
 # Объяснить следующий код обработки массива names - что за number мы в итоге определили?
 using Random
 Random.seed!(123)
 names = [rand('A':'Z') * '_' * rand('0':'9') * rand([".csv", ".bin"]) for _ in 1:100]
-# ---
+# в names происходит генерация букв от A до Z; чисел от 0 до 9 и расширения. на выходе получаем массив "Буква_Цифра.Расширение" 100 элементов
 same_names = unique(map(y -> split(y, ".")[1], filter(x -> startswith(x, "A"), names)))
 numbers = parse.(Int, map(x -> split(x, "_")[end], same_names))
 numbers_sorted = sort(numbers)
 number = findfirst(n -> !(n in numbers_sorted), 0:9)
 
-# Упростить этот код обработки:
+#=
+number показывает первое число из диапазона 0–9 , которое отсутствует в массиве начинающейся с буквой А
+["A_5.csv", "A_7.csv", "B_3.bin", "A_5.csv"]
+["A_5", "A_7"]
+number = 0
+=#
 
+# Упростить этот код обработки:
+g = filter(x -> startswith(x, "A"), names)
+
+g = map(x ->  split(x, ".")[1], g)
+g = map(x -> split(x, "_")[end], g)
+
+g = parse.(Int, g)
+number = findfirst(n -> !(n in numbers), 0:9)
 
 #===========================================================================================
 4. Свой тип данных на общих интерфейсах
@@ -296,6 +350,12 @@ number = findfirst(n -> !(n in numbers_sorted), 0:9)
 написать свой тип ленивого массива, каждый элемент которого
 вычисляется при взятии индекса (getindex) по формуле (index - 1)^2
 =#
+array = []
+
+for i in 1:10
+    push!(array, (i-1)^2)
+end
+array
 
 #=
 Написать два типа объектов команд, унаследованных от AbstractCommand,
@@ -307,15 +367,78 @@ number = findfirst(n -> !(n in numbers_sorted), 0:9)
 abstract type AbstractCommand end
 apply!(cmd::AbstractCommand, target::Vector) = error("Not implemented for type $(typeof(cmd))")
 
+struct SortCmd <: AbstractCommand
+end
+function apply!(cmd::SortCmd, target::Vector)
+    sort!(target)
+end
+
+# Команда для изменения элемента массива по индексу
+struct ChangeAtCmd <: AbstractCommand
+    index::Int
+    value::Any
+end 
+
+function apply!(cmd::ChangeAtCmd, target::Vector)
+    target[cmd.index] = cmd.value  # Изменяет элемент на позиции cmd.index
+end
+
+arr = [5, 3, 8, 6]
+sort_cmd = SortCmd()
+apply!(sort_cmd, arr)
+arr
+
+change_cmd = ChangeAtCmd(2, 99)
+apply!(change_cmd, arr)
+arr
+
 
 # Аналогичные команды, но без наследования и в виде замыканий (лямбда-функций)
+arr1 = [1, 4, 2, 5]
+apply_sort = target -> sort!(target)
+arr1
+apply_sort(arr1)
+
+change_cmd1(index::Int, value::Any) = target -> begin 
+target[index] = value 
+end
+apply_change = change_cmd1(1, 10)  # Создаем замыкание для изменения элемента
+apply_change(arr1) 
+arr1 
+
 
 
 #===========================================================================================
 5. Тесты: как проверять функции?
 =#
+# @test
 
 # Написать тест для функции
+function sum_numbers(a::Int, b::Int)::Int
+    return a + b
+end
+
+using Test
+
+# Функция для тестирования
+function test_sum_numbers()
+    @testset "Суммы чисел" begin
+        # Проверка базовых случаев
+        @test sum_numbers(2, 3) == 5
+        @test sum_numbers(0, 0) == 0
+        @test sum_numbers(-1, 1) == 0
+
+        # Проверка граничных случаев
+        @test sum_numbers(typemax(Int), 0) == typemax(Int)
+        @test sum_numbers(typemin(Int), 0) == typemin(Int)
+    end
+end
+
+
+# Запуск тестов
+test_sum_numbers()
+
+# 5 из 5
 
 
 #===========================================================================================
@@ -325,7 +448,20 @@ apply!(cmd::AbstractCommand, target::Vector) = error("Not implemented for type $
 #=
 Отладить функцию по шагам с помощью макроса @enter и точек останова
 =#
+using Pkg
+using Debugger
 
+function my_function(x)
+    y = x + 1
+    z = y * 2
+    return z
+end
+# Устанавливаем точку останова
+my_function(5)
+@run my_function(5)
+
+
+z
 
 #===========================================================================================
 7. Профилировщик: как оценить производительность функции?
