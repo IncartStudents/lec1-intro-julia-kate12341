@@ -1,15 +1,15 @@
 module Boids
 using Plots
 
-n = 30
-m = 30
+n = 50
+m = 50
 
-birds_i = 20 # количество птиц
+birds_i = 23 # количество птиц
 
 
 
 function eay(cord)
-    r = 5
+    r = 10
     neighbors = []
 
     for i in 1:birds_i
@@ -68,8 +68,17 @@ function centr(cord, neighbors)
         center_x = cord_end_x / count
         center_y = cord_end_y / count
 
-        new_x = cord[i, 1] + (center_x) * 0.001
-        new_y = cord[i, 2] + (center_y) * 0.001
+        if cord[i, 1] > center_x
+            new_x = cord[i, 1] - (center_x) * 0.001
+        else
+            new_x = cord[i, 1] + (center_x) * 0.001
+        end
+        if cord[i, 2] > center_y
+            new_y = cord[i, 2] - (center_y) * 0.001
+        else
+            new_y = cord[i, 2] + (center_y) * 0.001
+        end
+
 
         new_x = clamp(new_x, 1, n)
         new_y = clamp(new_y, 1, m)
@@ -87,7 +96,7 @@ function main(ARGS)
     cord = hcat(rand(1:n, birds_i), rand(1:m, birds_i))  # Генерация случайных начальных координат
     angles = rand(0:2π, birds_i)  # Начальные углы для каждой птицы
 
-    anim = @animate for time in 1:100
+    anim = @animate for time in 1:1000
         cord, angles = fly(cord, angles)
         scatter(cord[:, 1], cord[:, 2], xlim=(0, n), ylim=(0, m), markersize=5, legend=false)
     end
