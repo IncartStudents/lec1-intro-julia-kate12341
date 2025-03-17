@@ -4,12 +4,12 @@ using Plots
 n = 50
 m = 50
 
-birds_i = 23 # количество птиц
+birds_i = 25 # количество птиц
 
 
 
 function eay(cord)
-    r = 10
+    r = 15
     neighbors = []
 
     for i in 1:birds_i
@@ -89,14 +89,16 @@ function centr(cord, neighbors)
             cord[i, 1] = new_x
             cord[i, 2] = new_y
         end
+        
     end
+    return(cord)
 end
 
 function main(ARGS)
     cord = hcat(rand(1:n, birds_i), rand(1:m, birds_i))  # Генерация случайных начальных координат
     angles = rand(0:2π, birds_i)  # Начальные углы для каждой птицы
 
-    anim = @animate for time in 1:1000
+    anim = @animate for time in 1:500
         cord, angles = fly(cord, angles)
         scatter(cord[:, 1], cord[:, 2], xlim=(0, n), ylim=(0, m), markersize=5, legend=false)
     end
